@@ -1,36 +1,43 @@
-
-pg2data=$(psql -U a001-lims-pg -d postgres -h s001db-ln-pg2 -c "select last_msg_receipt_time from pg_stat_wal_receiver;" | sed -s -n '3p' | awk '{print($1)}')
-pg3data=$(psql -U a001-lims-pg -d postgres -h s001db-ln-pg3 -c "select last_msg_receipt_time from pg_stat_wal_receiver;" | sed -s -n '3p' | awk '{print($1)}')
-pg2time=$(psql -U a001-lims-pg -d postgres -h s001db-ln-pg2 -c "select last_msg_receipt_time from pg_stat_wal_receiver;" | sed -s -n '3p' | awk '{print($2)}')
-pg3time=$(psql -U a001-lims-pg -d postgres -h s001db-ln-pg3 -c "select last_msg_receipt_time from pg_stat_wal_receiver;" | sed -s -n '3p' | awk '{print($2)}')
+import os, psycopg2, subprocess
 
 
+def check_status(): # Проверка работы postgres
 
-echo $pg2data
-echo $pg3data
-echo $pg2time
-echo $pg3time
+    stat = subprocess.call(["systemctl", "is-active", "--quiet", "postgresql-14"])
+    if(stat == 0):
+        return 0
+    else:
+        return 1
+
+def check_slave():
+
+    connection = psycopg2.connect(user="a001-backup",
+                                  password="backup",
+                                  host="192.168.118.134",
+                                  port="5432",
+                                  database="postgres")
+    
+    cursor = connection.cursor()
+    get_select = "SELECT pg_is_in_recovery()"
+    cursor.execute(get_select)
+    check = cursor.fetchall()
+    
+    for i in check:
+        return i[0]
 
 
-if [[ $pg2data == $pg3data ]] && [[ $pg2time == $pg3time ]];
-  then
-    echo "слейвы консистенты"
-elif [[ $pg2data == $pg3data ]]
-  then
-    if [[ $pg2time > $pg3time ]]
-      then
-        echo "пг2 отстает"
-    elif [[ $pg2time < $pg3time ]]
-      then
-        echo "пг3 отстает"
-    fi
+def check_consistency():
+    pass
 
-elif [[ $pg2data > $pg3data ]]
-  then
-    echo "пг2 отстает"
-elif [[ $pg2data < $pg3data ]]
-  then
-    echo "пг3 отстает"
-else
-  echo "что то пошло не так"
-fi
+
+
+def main():
+    if  check_status() == 0:
+        if check_slave() == True:
+            print("Это слейв")
+        elif check_slave() == False:
+            print("Это мастер")
+        else:
+            print("Некорректный адрес")
+
+main()
