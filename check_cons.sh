@@ -1,6 +1,7 @@
 import os, psycopg2, subprocess
 
 
+
 def check_status(): # Проверка работы postgres
 
     stat = subprocess.call(["systemctl", "is-active", "--quiet", "postgresql-14"])
@@ -9,11 +10,11 @@ def check_status(): # Проверка работы postgres
     else:
         return 1
 
-def check_slave():
+def check_slave(): # Проверка master/slave
 
     connection = psycopg2.connect(user="a001-backup",
                                   password="backup",
-                                  host="192.168.118.134",
+                                  host="192.168.118.133",
                                   port="5432",
                                   database="postgres")
     
@@ -39,5 +40,7 @@ def main():
             print("Это мастер")
         else:
             print("Некорректный адрес")
+    else:
+        print("Постгрес упал")
 
 main()
