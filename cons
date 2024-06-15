@@ -1,0 +1,35 @@
+pg2data=$(psql -U a001-lims-pg -d postgres -h s001db-ln-pg2 -c "select last_msg_receipt_time from pg_stat_wal_receiver;" | sed -s -n '3p' | awk '{print($1)}')
+pg3data=$(psql -U a001-lims-pg -d postgres -h s001db-ln-pg3 -c "select last_msg_receipt_time from pg_stat_wal_receiver;" | sed -s -n '3p' | awk '{print($1)}')
+pg2time=$(psql -U a001-lims-pg -d postgres -h s001db-ln-pg2 -c "select last_msg_receipt_time from pg_stat_wal_receiver;" | sed -s -n '3p' | awk '{print($2)}')
+pg3time=$(psql -U a001-lims-pg -d postgres -h s001db-ln-pg3 -c "select last_msg_receipt_time from pg_stat_wal_receiver;" | sed -s -n '3p' | awk '{print($2)}')
+
+
+
+echo $pg2data
+echo $pg3data
+echo $pg2time
+echo $pg3time
+
+
+if [[ $pg2data == $pg3data ]] && [[ $pg2time == $pg3time ]];
+  then
+    echo "слейвы консистенты"
+elif [[ $pg2data == $pg3data ]]
+  then
+    if [[ $pg2time > $pg3time ]]
+      then
+        echo "пг2 отстает"
+    elif [[ $pg2time < $pg3time ]]
+      then
+        echo "пг3 отстает"
+    fi
+
+elif [[ $pg2data > $pg3data ]]
+  then
+    echo "пг2 отстает"
+elif [[ $pg2data < $pg3data ]]
+  then
+    echo "пг3 отстает"
+else
+  echo "что то пошло не так"
+fi
